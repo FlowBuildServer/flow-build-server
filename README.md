@@ -33,3 +33,5 @@ docker compose file + condition for calling next step in pipeline.
     * After each run service merge results to "pipeline repo"
     * Variable is also stored in "pipeline repo" but in separate folder
 3. Steps should be run on the cluster of machines
+
+(http://i.imgur.com/VxEIY20.jpg)
