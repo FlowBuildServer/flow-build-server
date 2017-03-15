@@ -35,3 +35,40 @@ docker compose file + condition for calling next step in pipeline.
 3. Steps should be run on the cluster of machines
 
 ![Flow CI Arch](http://i.imgur.com/VxEIY20.jpg)
+
+## Config example
+```json
+workflows:
+    - workflow:
+        name: "supper workflow"
+        jobs:
+            job:
+                name: "git"
+                action: git-compose.yml
+                success:
+                    - build
+                fail:
+                    - email
+            job:
+                name: build
+                action: build-compose.yml
+                success:
+                    - deploy
+                fail:
+                    - email
+            job:
+                name: deploy
+                action: qa-deploy-compose.yml
+                success:
+                    - integration-tests
+                fail:
+                    - email
+            job:
+                name: integration-tests
+                action: integration-compose.yml
+                fail:
+                    - email
+            job:
+                name: email
+                action: email-compose.yaml
+```
