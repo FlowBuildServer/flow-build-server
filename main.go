@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-yaml/yaml"
 	"github.com/google/go-github/github"
 )
 
