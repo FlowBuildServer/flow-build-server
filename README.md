@@ -72,3 +72,8 @@ workflows:
                 name: email
                 action: email-compose.yaml
 ```
+
+# Git subtrees
+As golang has a very shaky dependency management we will be using git subtrees as an alternative.
+To add a new subtree run `git subtree add --prefix github.com/$USER/$REPO $URL $Branch --squash`
+To pull the subtree use `git subtree pull --prefix github.com/$USER/$REPO $URL $Branch --squash`
