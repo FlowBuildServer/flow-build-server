@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/go-github/github"
 	"log"
+	"os"
 	"os/exec"
 	"sync"
 	"syscall"
@@ -12,6 +13,11 @@ import (
 
 type Pipe struct {
 	GitUrl string
+}
+
+type Step struct {
+	PullRequest *github.PullRequest
+	ExitCode    int
 }
 
 func NewPipe(GitUrl string) Pipe {
@@ -29,18 +35,20 @@ func runPipe(pipe *Pipe) {
 	//Puller (Trigger)
 	//TODO: move to docker containers
 	log.Println("T: ", pipe.GitUrl)
-	puller := Puller{RepoLink: pipe.GitUrl, User: "", Password: ""}
+	gh := Github{os.Getenv("GH_LOGIN"), os.Getenv("GH_PASSWORD")}
+	puller := Puller{RepoLink: pipe.GitUrl, Github: &gh}
 	err := puller.validate()
 	if err != nil {
 		log.Println("Not a valid repo", err)
 	}
+	reporter := GithubReporter{&gh}
 	prs, err := puller.Run()
 	if err != nil {
 		log.Println(err)
 	}
 
 	//Launchers launch pipeline itself
-	launchers := make(chan int) //return codes
+	launchers := make(chan Step) //return codes
 	var wg sync.WaitGroup
 	wg.Add(len(prs))
 	for _, pr := range prs {
@@ -48,7 +56,7 @@ func runPipe(pipe *Pipe) {
 			defer wg.Done()
 			//do smth
 			log.Println("Building ", *pr.Title, *pr.Head.Label, *pr.Base.Label)
-
+			reporter.ReportPending(&Report{pr, "Pending"})
 			cmd := exec.Command("docker", "run", "-e", fmt.Sprintf("GIT_REPO=%v", pipe.GitUrl), "mvn")
 
 			if err := cmd.Run(); err != nil {
@@ -58,16 +66,23 @@ func runPipe(pipe *Pipe) {
 					ws := exitError.Sys().(syscall.WaitStatus)
 					exitCode = ws.ExitStatus()
 				}
-				launchers <- exitCode
+				launchers <- Step{PullRequest: pr, ExitCode: exitCode}
 			} else {
-				launchers <- 0
+				launchers <- Step{PullRequest: pr, ExitCode: 0}
 			}
 		}(pr)
 	}
 	//Reporting
 	go func() {
-		for code := range launchers {
-			log.Println("Code", code)
+		for step := range launchers {
+			switch step.ExitCode {
+			case 0:
+				log.Println("Code", step.ExitCode)
+				reporter.ReportSuccess(&Report{step.PullRequest, "Success"})
+			default:
+				log.Println("Code", step.ExitCode)
+				reporter.ReportError(&Report{step.PullRequest, "Failed"})
+			}
 		}
 	}()
 	wg.Wait()
