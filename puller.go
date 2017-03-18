@@ -10,7 +10,9 @@ import (
 type Puller struct {
 	RepoLink string
 	Github   *Github
+	Storage *Storage
 }
+
 
 func (p *Puller) validate() error {
 	//check if it is github repo
@@ -26,7 +28,13 @@ func (p *Puller) Run() ([]*github.PullRequest, error) {
 	parts := strings.Split(p.RepoLink, "/")
 	owner, repo := parts[len(parts)-2], parts[len(parts)-1]
 	//fetch pulls
-	return fetchRecentPullRequests(p.Github, owner, repo)
+	pulls, err := fetchRecentPullRequests(p.Github, owner, repo)
+
+	if (err != nil) {
+		return nil, err
+	}
+
+	return p.Storage.Filter(pulls), nil
 }
 
 func fetchRecentPullRequests(gh *Github, owner string, repo string) ([]*github.PullRequest, error) {
