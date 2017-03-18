@@ -46,5 +46,6 @@ func StartFlowBuilder() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", flowbuild).Methods("GET")
 	r.HandleFunc("/newpipe", addnewpipe).Methods("POST")
+	log.Println("Flow Build Server started!")
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
