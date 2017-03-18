@@ -12,7 +12,8 @@ import (
 )
 
 type Pipe struct {
-	GitUrl string
+	GitUrl     string
+	PipePuller *Puller
 }
 
 type Step struct {
@@ -21,8 +22,8 @@ type Step struct {
 }
 
 func NewPipe(GitUrl string) Pipe {
-	ticker := time.NewTicker(time.Second * 15)
-	pipe := Pipe{GitUrl: GitUrl}
+	ticker := time.NewTicker(time.Second * 30)
+	pipe := Pipe{GitUrl: GitUrl, PipePuller: nil}
 	go func() {
 		for range ticker.C {
 			runPipe(&pipe)
@@ -34,19 +35,20 @@ func NewPipe(GitUrl string) Pipe {
 func runPipe(pipe *Pipe) {
 	//Puller (Trigger)
 	//TODO: move to docker containers
-	log.Println("T: ", pipe.GitUrl)
 	gh := Github{os.Getenv("GH_LOGIN"), os.Getenv("GH_PASSWORD")}
-	puller := Puller{RepoLink: pipe.GitUrl, Github: &gh, Storage: &Storage{make(map[int]*github.PullRequest)},}
-	err := puller.Validate()
+	if pipe.PipePuller == nil {
+		pipe.PipePuller = &Puller{RepoLink: pipe.GitUrl, Github: &gh, Storage: &Storage{make(map[int]*github.PullRequest)}}
+	}
+	err := pipe.PipePuller.Validate()
 	if err != nil {
 		log.Println("Not a valid repo", err)
 	}
 	reporter := GithubReporter{&gh}
-	prs, err := puller.Run()
+	prs, err := pipe.PipePuller.Run()
 	if err != nil {
 		log.Println(err)
+		return
 	}
-
 	//Launchers launch pipeline itself
 	launchers := make(chan Step) //return codes
 	var wg sync.WaitGroup
@@ -57,7 +59,7 @@ func runPipe(pipe *Pipe) {
 			//do smth
 			log.Println("Building ", *pr.Title, *pr.Head.Label, *pr.Base.Label)
 			reporter.ReportPending(&Report{pr, "Pending"})
-			cmd := exec.Command("docker", "run", "-e", fmt.Sprintf("GIT_REPO=%v", pipe.GitUrl), "mvn")
+			cmd := exec.Command("docker", "run", "-e", fmt.Sprintf("GIT_REPO=%v", pipe.GitUrl), "-e", fmt.Sprintf("SOURCE_BRANCH=%v", *pr.Head.Ref), "-e", fmt.Sprintf("TARGET_BRANCH=%v", *pr.Base.Ref), "mvn")
 
 			if err := cmd.Run(); err != nil {
 				log.Println("cmd.Start: ", err)
