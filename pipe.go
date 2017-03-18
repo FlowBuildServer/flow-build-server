@@ -36,8 +36,8 @@ func runPipe(pipe *Pipe) {
 	//TODO: move to docker containers
 	log.Println("T: ", pipe.GitUrl)
 	gh := Github{os.Getenv("GH_LOGIN"), os.Getenv("GH_PASSWORD")}
-	puller := Puller{RepoLink: pipe.GitUrl, Github: &gh}
-	err := puller.validate()
+	puller := Puller{RepoLink: pipe.GitUrl, Github: &gh, Storage: &Storage{make(map[int]*github.PullRequest)},}
+	err := puller.Validate()
 	if err != nil {
 		log.Println("Not a valid repo", err)
 	}

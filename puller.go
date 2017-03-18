@@ -14,7 +14,7 @@ type Puller struct {
 }
 
 
-func (p *Puller) validate() error {
+func (p *Puller) Validate() error {
 	//check if it is github repo
 	if !strings.Contains(p.RepoLink, "github.com") {
 		return errors.New("Github only!")
