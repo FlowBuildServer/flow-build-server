@@ -5,18 +5,11 @@ import (
 	"errors"
 	"github.com/google/go-github/github"
 	"strings"
-	//"fmt"
 )
 
 type Puller struct {
 	RepoLink string
-	User     string
-	Password string
-}
-
-type Creds struct {
-	Owner string
-	Repo  string
+	Github   *Github
 }
 
 func (p *Puller) validate() error {
@@ -33,24 +26,13 @@ func (p *Puller) Run() ([]*github.PullRequest, error) {
 	parts := strings.Split(p.RepoLink, "/")
 	owner, repo := parts[len(parts)-2], parts[len(parts)-1]
 	//fetch pulls
-	return fetchRecentPullRequests(p.createClient(), owner, repo)
+	return fetchRecentPullRequests(p.Github, owner, repo)
 }
 
-func (p *Puller) createClient() *github.Client {
-	var client *github.Client
-	if p.User != "" && p.Password != "" {
-		transport := github.BasicAuthTransport{p.User, p.Password, "", nil}
-		client = github.NewClient(transport.Client())
-	} else {
-		client = github.NewClient(nil)
-	}
-
-	return client
-}
-
-func fetchRecentPullRequests(client *github.Client, owner string, repo string) ([]*github.PullRequest, error) {
+func fetchRecentPullRequests(gh *Github, owner string, repo string) ([]*github.PullRequest, error) {
 	var allPullRequests []*github.PullRequest
 	ctx := context.Background()
+	client := gh.CreateClient()
 	options := &github.PullRequestListOptions{
 		State:       "open",
 		ListOptions: github.ListOptions{PerPage: 50},
@@ -76,19 +58,4 @@ func fetchRecentPullRequests(client *github.Client, owner string, repo string) (
 	}
 
 	return allPullRequests, nil
-}
-
-func fetchRepo(creds *Creds) (*github.Repository, error) {
-	ctx := context.Background()
-	client := github.NewClient(nil)
-	repo, _, error := client.Repositories.Get(
-		ctx,
-		creds.Owner,
-		creds.Repo,
-	)
-	if error != nil {
-		return nil, error
-	}
-
-	return repo, nil
 }
