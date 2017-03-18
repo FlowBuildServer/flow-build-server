@@ -10,6 +10,8 @@ import (
 
 type Puller struct {
 	RepoLink string
+	User     string
+	Password string
 }
 
 type Creds struct {
@@ -26,18 +28,29 @@ func (p *Puller) validate() error {
 	return nil
 }
 
-func (p *Puller) run() ([]*github.PullRequest, error) {
+func (p *Puller) Run() ([]*github.PullRequest, error) {
 	//build creds (silly way - need to improve)
 	parts := strings.Split(p.RepoLink, "/")
-	creds := Creds{parts[len(parts)-2], parts[len(parts)-1]}
+	owner, repo := parts[len(parts)-2], parts[len(parts)-1]
 	//fetch pulls
-	return fetchRecentPullRequests(&creds)
+	return fetchRecentPullRequests(p.createClient(), owner, repo)
 }
 
-func fetchRecentPullRequests(creds *Creds) ([]*github.PullRequest, error) {
+func (p *Puller) createClient() *github.Client {
+	var client *github.Client
+	if p.User != "" && p.Password != "" {
+		transport := github.BasicAuthTransport{p.User, p.Password, "", nil}
+		client = github.NewClient(transport.Client())
+	} else {
+		client = github.NewClient(nil)
+	}
+
+	return client
+}
+
+func fetchRecentPullRequests(client *github.Client, owner string, repo string) ([]*github.PullRequest, error) {
 	var allPullRequests []*github.PullRequest
 	ctx := context.Background()
-	client := github.NewClient(nil)
 	options := &github.PullRequestListOptions{
 		State:       "open",
 		ListOptions: github.ListOptions{PerPage: 50},
@@ -47,8 +60,8 @@ func fetchRecentPullRequests(creds *Creds) ([]*github.PullRequest, error) {
 	for {
 		pullRequests, resp, error := client.PullRequests.List(
 			ctx,
-			creds.Owner,
-			creds.Repo,
+			owner,
+			repo,
 			options,
 		)
 		if error != nil {
