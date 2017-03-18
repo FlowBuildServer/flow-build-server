@@ -5,7 +5,7 @@ import (
 )
 
 func hasChanges(pr1 *github.PullRequest, pr2 *github.PullRequest) bool {
-    return pr1.Head.SHA != pr2.Head.SHA || pr1.Base.SHA != pr2.Base.SHA
+    return *pr1.Head.SHA != *pr2.Head.SHA || *pr1.Base.SHA != *pr2.Base.SHA
 }
 
 type Storage struct {
