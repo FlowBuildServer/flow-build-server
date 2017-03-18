@@ -2,12 +2,18 @@ package main
 
 import (
 	"fmt"
-	"github.com/docker/docker/client"
-	"github.com/google/go-github/github"
-	"github.com/levigross/grequests"
-	"gopkg.in/yaml.v2"
+	//"github.com/docker/docker/client"
+	//"github.com/levigross/grequests"
+	//"gopkg.in/yaml.v2"
 )
 
 func main() {
-	fmt.Print("Kill Jenkins")
+	puller := Puller{}
+	pulls, error := puller.FetchRecentPullRequests(&Creds{"google", "ExoPlayer"})
+
+	if error != nil {
+	    fmt.Println(error)
+	} else {
+		fmt.Println(len(pulls))
+	}
 }
