@@ -17,6 +17,8 @@ var pipes []*Pipe
 
 type pipe_post struct {
 	URL string
+	CHAT_ID string
+	TOKEN string
 }
 
 func flowbuild(w http.ResponseWriter, r *http.Request) {
@@ -30,13 +32,14 @@ func addnewpipe(w http.ResponseWriter, r *http.Request) {
 	var in pipe_post
 	err := decoder.Decode(&in)
 	if err != nil {
+		log.Println(err)
 		w.WriteHeader(400)
 		w.Write([]byte("{\"message\": \"Malformed request\"}"))
 		return
 	}
 
 	log.Println(in)
-	pipe, err := NewPipe(in.URL)
+	pipe, err := NewPipe(in.URL, in.CHAT_ID, in.TOKEN)
 	if err != nil {
 		w.WriteHeader(400)
 		w.Write([]byte(fmt.Sprintf("{\"message\": \"%v\"}", err)))

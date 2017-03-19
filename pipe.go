@@ -23,10 +23,10 @@ type Step struct {
 	ExitCode    int
 }
 
-func NewPipe(GitUrl string) (*Pipe, error) {
+func NewPipe(GitUrl string, ChatId string, TelegramToken string) (*Pipe, error) {
 	ticker := time.NewTicker(time.Second * 10)
 	gh := Github{os.Getenv("GH_LOGIN"), os.Getenv("GH_PASSWORD")}
-	t := Telegram{"http://localhost:8080"}
+	t := Telegram{"http://localhost:8080", ChatId, TelegramToken}
 	puller := &Puller{RepoLink: GitUrl, Github: &gh, Storage: &Storage{make(map[int]*github.PullRequest)}}
 	//validate before run pipe
 	err := puller.Validate()
@@ -67,7 +67,7 @@ func runPipe(pipe *Pipe) {
 			//do smth
 			log.Println("Building ", *pr.Title, *pr.Head.Label, *pr.Base.Label)
 			pipe.GithubRepoter.ReportPending(&Report{pr, "Pending"})
-			//pipe.TelegramRepoter.ReportPending(&Report{pr, "Pending"})
+			pipe.TelegramRepoter.ReportPending(&Report{pr, "Pending"})
 			cmd := exec.Command("docker", "run", "-e", fmt.Sprintf("GIT_REPO=%v", pipe.GitUrl), "-e", fmt.Sprintf("SOURCE_BRANCH=%v", *pr.Head.Ref), "-e", fmt.Sprintf("TARGET_BRANCH=%v", *pr.Base.Ref), "mvn")
 
 			if err := cmd.Run(); err != nil {
@@ -90,9 +90,11 @@ func runPipe(pipe *Pipe) {
 			case 0:
 				log.Println("Code", step.ExitCode)
 				pipe.GithubRepoter.ReportSuccess(&Report{step.PullRequest, "Success"})
+				pipe.TelegramRepoter.ReportSuccess(&Report{step.PullRequest, "Success"})
 			default:
 				log.Println("Code", step.ExitCode)
 				pipe.GithubRepoter.ReportError(&Report{step.PullRequest, "Failed"})
+				pipe.TelegramRepoter.ReportError(&Report{step.PullRequest, "Failed"})
 			}
 		}
 	}()

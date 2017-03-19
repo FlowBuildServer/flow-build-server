@@ -22,16 +22,20 @@ func (self *TelegramReporter) ReportError(report *Report) (error) {
 }
 
 func (self *TelegramReporter) sendReport(status string, report *Report) (error) {
-    message := status
-    if report != nil {
-        message = report.Message
-    }
+    //message := status
+    //if report != nil {
+    //    message = report.Message
+    //}
 
     _, err := grequests.Post(
-        fmt.Sprintf("%v/status", self.Telegram.Url),
-        &grequests.RequestOptions{
-            JSON: struct {status string; message string; pullUrl string}{status, message, *report.PullRequest.HTMLURL},
-        },
+        fmt.Sprintf(
+            "https://api.telegram.org/bot%v/sendMessage?chat_id=%v&text=Build status for PR %v: %v",
+            self.Telegram.Token,
+            self.Telegram.ChatId,
+            *report.PullRequest.Number,
+            status,
+        ),
+        nil,
     )
 
     return err;
